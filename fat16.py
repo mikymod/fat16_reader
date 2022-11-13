@@ -1,6 +1,5 @@
 import struct
 
-
 class Fat16():
     # Read image data
     def __init__(self):
@@ -51,15 +50,17 @@ class Fat16():
     
     def read_cluster_area(self):
         for value in self.root_dir.values():
-            file_start = self.cluster_area_start() + value['start_cluster'] * 512
-            ascii_array = struct.unpack('BBBBBBBBBBB', b''.join(self.data[file_start:file_start+11]))
-            entry_name = ''.join(chr(ascii) for ascii in ascii_array)
-            print(entry_name)
+            cluster_start = self.cluster_area_start() + value['start_cluster'] * (self.cluster_size_in_sector * self.sector_size)
+            for offset in range(cluster_start, cluster_start + (self.cluster_size_in_sector * self.sector_size), 32):
+                ascii_tuple = struct.unpack('BBBBBBBBBBB', b''.join(self.data[offset:offset+11]))
+                if (ascii_tuple == (0,0,0,0,0,0,0,0,0,0,0)):
+                    print('\n')
+                    break;
+                file_name = ''.join(chr(ascii) for ascii in ascii_tuple)
+                print('entry: {} -> {} '.format(value['entry_name'], file_name))
 
       
 fat16 = Fat16()
 fat16.read_mbr()
 fat16.read_root_directory()
-print(fat16.root_dir)
-print('cluster_area_start: ' + hex(fat16.cluster_area_start()))
 fat16.read_cluster_area()
