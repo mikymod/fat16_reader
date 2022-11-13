@@ -42,18 +42,21 @@ class Fat16():
             if (ascii_tuple == (0,0,0,0,0,0,0,0,0,0,0)):
                 break
 
-            entry_name = ''.join(chr(ascii) for ascii in ascii_tuple)
-            if (entry_name != ''):
-                self.root_dir[hex(i)] = {
-                    'entry_name': entry_name,
-                    'attributes': struct.unpack('B', self.data[i+12])[0],
-                    'start_cluster': struct.unpack('<H', b''.join(self.data[i+26:i+28]))[0],
-                    'file_size': struct.unpack('<I', b''.join(self.data[i+28:i+32]))[0]
-                }
+            self.root_dir[hex(i)] = {
+                'entry_name': ''.join(chr(ascii) for ascii in ascii_tuple),
+                'attributes': struct.unpack('B', self.data[i+12])[0],
+                'start_cluster': struct.unpack('<H', b''.join(self.data[i+26:i+28]))[0],
+                'file_size': struct.unpack('<I', b''.join(self.data[i+28:i+32]))[0]
+            }
+
+            print(self.root_dir[hex(i)])
+        
     
     def read_cluster_area(self):
         for value in self.root_dir.values():
-            cluster_start = self.cluster_area_start() + value['start_cluster'] * (self.cluster_size_in_sector * self.sector_size)
+            if (value['start_cluster'] == 0):
+                continue
+            cluster_start = self.cluster_area_start() + (value['start_cluster'] - 2) * (self.cluster_size_in_sector * self.sector_size)
             for offset in range(cluster_start, cluster_start + (self.cluster_size_in_sector * self.sector_size), 32):
                 ascii_tuple = struct.unpack('BBBBBBBBBBB', b''.join(self.data[offset:offset+11]))
                 if (ascii_tuple == (0,0,0,0,0,0,0,0,0,0,0)):
