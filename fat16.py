@@ -8,6 +8,8 @@ class Fat16():
         self.fat = []
         self.root_dir = {}
         self.cluster_area = {}
+
+        # TODO: pass file as command line argument
         try: 
             with open('test.img', 'rb') as image:
                 byte = image.read(1)
@@ -18,12 +20,12 @@ class Fat16():
         except IOError:
             print('IO error')
         
-        self.read_mbr()
-        self.read_fat()
-        self.read_root_directory()
-        self.read_cluster_area()
+        self._read_mbr()
+        self._read_fat()
+        self._read_root_directory()
+        self._read_cluster_area()
 
-    def read_mbr(self):
+    def _read_mbr(self):
         self.reserved_sector = struct.unpack('<H', b''.join(self.data[14:16]))[0]
         self.sector_size = struct.unpack('<H', b''.join(self.data[11:13]))[0]
         self.cluster_size_in_sector = struct.unpack('B', self.data[13])[0]
@@ -31,22 +33,22 @@ class Fat16():
         self.fat_copies = struct.unpack('B', self.data[16])[0]
         self.root_dir_entries = struct.unpack('<H', b''.join(self.data[17:19]))[0]
     
-    def get_fat_start(self):
+    def _get_fat_start(self):
         return self.reserved_sector * self.sector_size
 
-    def get_root_dir_start(self):
+    def _get_root_dir_start(self):
         return self.reserved_sector * self.sector_size + self.fat_copies * self.fat_size * self.sector_size
     
-    def cluster_area_start(self):
-        return self.get_root_dir_start() + self.root_dir_entries * 32
+    def _cluster_area_start(self):
+        return self._get_root_dir_start() + self.root_dir_entries * 32
 
-    def read_fat(self):
-        for offset in range(self.get_fat_start(), self.get_fat_start() + self.sector_size, 2):
+    def _read_fat(self):
+        for offset in range(self._get_fat_start(), self._get_fat_start() + self.sector_size, 2):
             entry = struct.unpack('<H', b''.join(self.data[offset:offset+2]))[0]
             self.fat.append(hex(entry))
 
-    def read_root_directory(self):
-        for i in range(self.get_root_dir_start(), self.get_root_dir_start() + 32 * self.root_dir_entries, 32):
+    def _read_root_directory(self):
+        for i in range(self._get_root_dir_start(), self._get_root_dir_start() + 32 * self.root_dir_entries, 32):
             ascii_tuple = struct.unpack('BBBBBBBBBBB', b''.join(self.data[i:i+11]))
             if (ascii_tuple == (0,0,0,0,0,0,0,0,0,0,0)):
                 break
@@ -58,11 +60,11 @@ class Fat16():
                 'file_size': struct.unpack('<I', b''.join(self.data[i+28:i+32]))[0]
             }       
     
-    def read_cluster_area(self):
+    def _read_cluster_area(self):
         for value in self.root_dir.values():
             if (value['start_cluster'] == 0):
                 continue
-            cluster_start = self.cluster_area_start() + (value['start_cluster'] - 2) * (self.cluster_size_in_sector * self.sector_size)
+            cluster_start = self._cluster_area_start() + (value['start_cluster'] - 2) * (self.cluster_size_in_sector * self.sector_size)
             for offset in range(cluster_start, cluster_start + (self.cluster_size_in_sector * self.sector_size), 32):
                 name_tuple = struct.unpack('BBBBBBBB', b''.join(self.data[offset:offset+8]))
                 if (name_tuple == (0,0,0,0,0,0,0,0)):
