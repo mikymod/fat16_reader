@@ -37,9 +37,12 @@ class Fat16():
         return self.get_root_dir_start() + self.root_dir_entries * 32
 
     def read_root_directory(self):
-        for i in range(self.get_root_dir_start(), self.get_root_dir_start() + 32 * 4, 32): # todo: 4 should be self.root_dir_entries
-            ascii_array = struct.unpack('BBBBBBBBBBB', b''.join(self.data[i:i+11]))
-            entry_name = ''.join(chr(ascii) for ascii in ascii_array)
+        for i in range(self.get_root_dir_start(), self.get_root_dir_start() + 32 * self.root_dir_entries, 32):
+            ascii_tuple = struct.unpack('BBBBBBBBBBB', b''.join(self.data[i:i+11]))
+            if (ascii_tuple == (0,0,0,0,0,0,0,0,0,0,0)):
+                break
+
+            entry_name = ''.join(chr(ascii) for ascii in ascii_tuple)
             if (entry_name != ''):
                 self.root_dir[hex(i)] = {
                     'entry_name': entry_name,
